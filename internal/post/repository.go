@@ -24,7 +24,9 @@ func (r *Repository) List(ctx context.Context, tag string, category string, publ
 		SELECT p.id, p.title, p.slug, p.excerpt, p.content, p.tags, p.category_id, p.published, p.created_at, p.updated_at
 		FROM posts p
 		WHERE ($1 = '' OR $1 = ANY(p.tags))
-		  AND ($2 = '' OR p.category_id = (SELECT id FROM categories WHERE slug = $2))
+		  AND ($2 = '' OR p.category_id = ANY(
+		        ARRAY(SELECT id FROM categories WHERE slug = $2 OR parent_id = (SELECT id FROM categories WHERE slug = $2))
+		      ))
 		  AND (NOT $3 OR p.published = true)
 		ORDER BY p.created_at DESC`
 
