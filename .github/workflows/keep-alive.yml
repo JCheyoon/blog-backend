@@ -1,0 +1,33 @@
+# Keep Project Alive
+name: Keep Project Alive
+
+on:
+  schedule:
+    # 매일 00:00 UTC 실행
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        env:
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          URL="https://rstdrvacgipfwiwaytsv.supabase.co/rest/v1/"
+
+          if [ -n "${SUPABASE_ANON_KEY}" ]; then
+            # anon key를 GitHub Secret(SUPABASE_ANON_KEY)
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" \
+              -H "apikey: ${SUPABASE_ANON_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+              "${URL}")
+          else
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" "${URL}")
+          fi
+
+          echo "::notice::Supabase responded with HTTP ${CODE}"
+          # 401/404 같은 4xx 응답도 "서버에 요청이 도달"한 것이므로
+          # 프로젝트 일시정지 방지에는 충분합니다.
+          # 네트워크 자체가 끊기면 curl이 실패해 이 단계가 실패로 표시됩니다.
