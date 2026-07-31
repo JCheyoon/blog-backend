@@ -1,33 +1,48 @@
 # Keep Project Alive
+# 매일 1회 DB에 프라이빗(비공개) 포스트 하나를 만들었다가 바로 삭제해서
+# Supabase 무료 티어가 "활동 없음"으로 판단해 일시정지되는 것을 방지합니다.
+# REST 핑보다 실제 DB 쓰기/삭제가 일시정지 방지에 더 확실합니다.
 name: Keep Project Alive
 
 on:
   schedule:
-    # 매일 00:00 UTC 실행
+    # 매일 00:00 UTC 실행 (한국 시간 오전 9시)
+    # 더 자주 깨우고 싶다면: cron: "*/15 * * * *"
     - cron: "0 0 * * *"
+  # GitHub 웹에서 [Run workflow] 버튼으로 수동 실행 가능
   workflow_dispatch:
 
 jobs:
-  ping:
+  keep-db-alive:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase REST API
-        env:
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      - name: Install postgres client
         run: |
-          URL="https://rstdrvacgipfwiwaytsv.supabase.co/rest/v1/"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
 
-          if [ -n "${SUPABASE_ANON_KEY}" ]; then
-            # anon key를 GitHub Secret(SUPABASE_ANON_KEY)
-            CODE=$(curl -sS -o /dev/null -w "%{http_code}" \
-              -H "apikey: ${SUPABASE_ANON_KEY}" \
-              -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
-              "${URL}")
-          else
-            CODE=$(curl -sS -o /dev/null -w "%{http_code}" "${URL}")
-          fi
-
-          echo "::notice::Supabase responded with HTTP ${CODE}"
-          # 401/404 같은 4xx 응답도 "서버에 요청이 도달"한 것이므로
-          # 프로젝트 일시정지 방지에는 충분합니다.
-          # 네트워크 자체가 끊기면 curl이 실패해 이 단계가 실패로 표시됩니다.
+      - name: Insert and delete a private post
+        env:
+          # GitHub 저장소 Secret으로 등록한 Supabase 연결 문자열
+          # (Settings > Secrets and variables > Actions > New repository secret > DATABASE_URL)
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          # 프라이빗 포스트(비공개) 1개 INSERT 후 같은 문장 안에서 즉시 DELETE
+          # - published = false 로 생성 → 공개 목록에는 절대 노출되지 않음
+          # - slug 는 UNIQUE 라서 epoch(초) 기반으로 매 실행마다 고유하게 생성
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "
+            WITH ins AS (
+              INSERT INTO posts (title, slug, excerpt, content, tags, published)
+              VALUES (
+                'keep-alive ping',
+                'keep-alive-' || floor(extract(epoch from now()))::text,
+                '',
+                '',
+                '{}',
+                false
+              )
+              RETURNING id
+            )
+            DELETE FROM posts WHERE id IN (SELECT id FROM ins);
+          "
+          echo "::notice::Inserted and deleted a private post (DB kept alive)"
