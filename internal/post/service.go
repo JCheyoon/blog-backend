@@ -23,8 +23,22 @@ func (s *Service) List(ctx context.Context, tag string, category string, publish
 	return s.repo.List(ctx, tag, category, publishedOnly)
 }
 
+// ListAll returns posts including drafts. Admin-only: callers must be
+// behind the auth middleware.
+func (s *Service) ListAll(ctx context.Context, tag string, category string) ([]Post, error) {
+	return s.repo.List(ctx, tag, category, false)
+}
+
+// GetBySlug is the public read path: drafts are private, so only published
+// posts are ever returned.
 func (s *Service) GetBySlug(ctx context.Context, slug string) (*Post, error) {
-	return s.repo.GetBySlug(ctx, slug)
+	return s.repo.GetBySlug(ctx, slug, true)
+}
+
+// GetBySlugAdmin returns any post by slug including drafts. Admin-only:
+// callers must be behind the auth middleware.
+func (s *Service) GetBySlugAdmin(ctx context.Context, slug string) (*Post, error) {
+	return s.repo.GetBySlug(ctx, slug, false)
 }
 
 func (s *Service) GetByID(ctx context.Context, id int64) (*Post, error) {
