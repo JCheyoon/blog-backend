@@ -1,16 +1,26 @@
+<<<<<<< HEAD
 # Keep Project Alive
+=======
+>>>>>>> 28224578c12101ab8a39dd5e5147b68eb7a8a4b3
 name: Keep Project Alive
 
 on:
   schedule:
+<<<<<<< HEAD
     # 매일 00:00 UTC 실행 (한국 시간 오전 9시)
     - cron: "0 0 * * *"
+=======
+    # 매일 00:00 (UTC 기준) 정기 실행
+    - cron: "0 0 * * *"
+
+>>>>>>> 28224578c12101ab8a39dd5e5147b68eb7a8a4b3
   workflow_dispatch:
 
 jobs:
-  keep-db-alive:
+  ping:
     runs-on: ubuntu-latest
     steps:
+<<<<<<< HEAD
       - name: Ping Supabase REST API (SELECT 1행만 조회)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -24,3 +34,23 @@ jobs:
             -o /dev/null
 
           echo "::notice::Supabase REST API pinged (DB kept alive)"
+=======
+      - name: Send keep-alive request to Supabase
+        run: |
+          echo "Sending HTTP GET Request to Supabase..."
+
+          # HTTP 상태 코드를 출력하는 curl 요청 (200 OK 등의 응답을 받아오면 성공)
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            "${{ secrets.DATABASE_URL }}")
+
+          echo "Response Status Code: $HTTP_STATUS"
+
+          # HTTP 상태 코드가 200번대인지 체크
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            echo "Successfully pinged Supabase! Project is now active."
+          else
+            echo "Warning: Expected 2xx status, but got $HTTP_STATUS"
+          fi
+>>>>>>> 28224578c12101ab8a39dd5e5147b68eb7a8a4b3

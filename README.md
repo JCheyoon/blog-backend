@@ -62,6 +62,7 @@ go run ./cmd/hashpw "your-admin-password"   # copy output into ADMIN_PASSWORD_HA
 
 make docker-up      # starts postgres + api (or point DATABASE_URL at Supabase directly)
 make migrate-up      # applies schema (run once, needs golang-migrate CLI)
+make run
 ```
 
 API is now live at `http://localhost:8080`.
