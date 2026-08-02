@@ -14,8 +14,6 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          # posts 테이블에서 id 1개만 가볍게 조회 (쓰기 없음)
-          # -sf : 실패 시(4xx/5xx) 조용히 종료코드 반환 -> ON_ERROR_STOP 역할
           curl -sf "$SUPABASE_URL/rest/v1/posts?select=id&limit=1" \
             -H "apikey: $SUPABASE_ANON_KEY" \
             -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
