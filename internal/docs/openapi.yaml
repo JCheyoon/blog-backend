@@ -67,6 +67,7 @@ paths:
     get:
       tags: [posts]
       summary: List published posts
+      description: Public route - returns published posts only. Drafts are private and only visible via the authenticated /api/admin/posts route.
       parameters:
         - name: tag
           in: query
@@ -74,6 +75,12 @@ paths:
           schema:
             type: string
           description: Filter by tag
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by category slug (includes posts in child categories)
       responses:
         "200":
           description: List of posts
@@ -86,6 +93,7 @@ paths:
     post:
       tags: [posts]
       summary: Create a post (admin only)
+      description: Set published=false to save as a private draft. Drafts are only visible to the admin.
       security:
         - bearerAuth: []
       requestBody:
@@ -112,6 +120,7 @@ paths:
     get:
       tags: [posts]
       summary: Get a single post by slug
+      description: Public route - 404 for unpublished (draft) posts.
       parameters:
         - name: slug
           in: path
@@ -127,6 +136,69 @@ paths:
                 $ref: "#/components/schemas/Post"
         "404":
           description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/admin/posts:
+    get:
+      tags: [posts]
+      summary: List all posts including drafts (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tag
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by tag
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by category slug
+      responses:
+        "200":
+          description: List of posts including drafts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Post"
+        "401":
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/admin/posts/{id}:
+    get:
+      tags: [posts]
+      summary: Get a post by id including drafts (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "404":
+          description: Not found
+        "401":
+          description: Missing or invalid token
           content:
             application/json:
               schema:

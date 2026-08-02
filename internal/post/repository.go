@@ -47,13 +47,18 @@ func (r *Repository) List(ctx context.Context, tag string, category string, publ
 	return posts, rows.Err()
 }
 
-func (r *Repository) GetBySlug(ctx context.Context, slug string) (*Post, error) {
+// GetBySlug fetches a post by slug. When publishedOnly is true, draft
+// (unpublished) posts are excluded so private posts never leak through
+// public routes. Admin routes pass false to see drafts.
+func (r *Repository) GetBySlug(ctx context.Context, slug string, publishedOnly bool) (*Post, error) {
 	query := `
 		SELECT id, title, slug, excerpt, content, tags, category_id, published, created_at, updated_at
-		FROM posts WHERE slug = $1`
+		FROM posts
+		WHERE slug = $1
+		  AND (NOT $2 OR published = true)`
 
 	var p Post
-	err := r.db.QueryRow(ctx, query, slug).Scan(
+	err := r.db.QueryRow(ctx, query, slug, publishedOnly).Scan(
 		&p.ID, &p.Title, &p.Slug, &p.Excerpt, &p.Content, &p.Tags, &p.CategoryID, &p.Published, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {

@@ -27,23 +27,40 @@ func NewHandler(svc *Service, chat asker) *Handler {
 // wrapped by the caller (see cmd/api/main.go) so this package stays
 // unaware of how auth works. askRateLimit wraps only the /ask route, since that's the one route that costs real money per call.
 func (h *Handler) Register(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc, askRateLimit func(http.HandlerFunc) http.HandlerFunc) {
+	// Public routes: published posts only. Drafts are private.
 	mux.HandleFunc("GET /api/posts", h.list)
 	mux.HandleFunc("GET /api/posts/{slug}", h.getBySlug)
+	mux.HandleFunc("POST /api/posts/{slug}/ask", askRateLimit(h.ask))
+
+	// Admin routes: auth required, drafts included.
 	mux.HandleFunc("POST /api/posts", authMiddleware(h.create))
 	mux.HandleFunc("PUT /api/posts/{id}", authMiddleware(h.update))
 	mux.HandleFunc("DELETE /api/posts/{id}", authMiddleware(h.delete))
+	mux.HandleFunc("GET /api/admin/posts", authMiddleware(h.listAll))
 	mux.HandleFunc("GET /api/admin/posts/{id}", authMiddleware(h.getByID))
-	mux.HandleFunc("POST /api/posts/{slug}/ask", askRateLimit(h.ask))
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	tag := r.URL.Query().Get("tag")
 	category := r.URL.Query().Get("category")
-	all := r.URL.Query().Get("all") == "true"
-	posts, err := h.svc.List(r.Context(), tag, category, !all)
+	posts, err := h.svc.List(r.Context(), tag, category, true)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list posts")
 		slog.Error("list posts", "error", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, posts)
+}
+
+// listAll returns every post including drafts. Registered behind the auth
+// middleware, so private posts are only visible to the admin.
+func (h *Handler) listAll(w http.ResponseWriter, r *http.Request) {
+	tag := r.URL.Query().Get("tag")
+	category := r.URL.Query().Get("category")
+	posts, err := h.svc.ListAll(r.Context(), tag, category)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list posts")
+		slog.Error("list all posts", "error", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, posts)
