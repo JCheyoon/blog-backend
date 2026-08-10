@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go build:*)",
+      "Bash(go run:*)",
+      "Bash(go test:*)",
+      "Bash(go vet:*)",
+      "Bash(go mod:*)",
+      "Bash(gofmt:*)",
+      "Bash(make:*)",
+      "Bash(migrate:*)",
+      "Bash(docker compose:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(curl http://localhost:*)",
+      "Bash(curl http://127.0.0.1:*)"
+    ],
+    "ask": [
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(docker:*)",
+      "Bash(curl:*)",
+      "Read(.env)"
+    ],
+    "deny": ["Bash(rm -rf *)", "Bash(sudo *)", "Write(.env)", "Edit(.env)"]
+  },
+  "env": {
+    "PORT": "8080"
+  }
+}
