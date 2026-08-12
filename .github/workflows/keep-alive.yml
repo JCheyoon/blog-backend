@@ -2,21 +2,43 @@ name: Keep Project Alive
 
 on:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 0 */5 * *"
   workflow_dispatch:
 
 jobs:
   keep-db-alive:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase REST API (SELECT 1행만 조회)
+      - name: Insert & delete dummy private post
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          curl -sf "$SUPABASE_URL/rest/v1/posts?select=id&limit=1" \
-            -H "apikey: $SUPABASE_ANON_KEY" \
-            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-            -o /dev/null
+          set -euo pipefail
 
-          echo "::notice::Supabase REST API pinged (DB kept alive)"
+          SLUG="keep-alive-$(date +%s)"
+
+          echo "[1/2] Creating a dummy private post ..."
+          INSERT_RESPONSE=$(curl -sf -X POST \
+            "$SUPABASE_URL/rest/v1/posts?select=id" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d "{\"title\":\"keep-alive\",\"slug\":\"$SLUG\"}")
+
+          POST_ID=$(printf '%s' "$INSERT_RESPONSE" | jq -r '.[0].id // empty')
+          if [ -z "$POST_ID" ]; then
+            echo "::error::Failed to extract post id. Response: $INSERT_RESPONSE"
+            exit 1
+          fi
+          echo "Created dummy private post (id=$POST_ID, slug=$SLUG)"
+
+          echo "[2/2] Deleting the dummy post ..."
+          curl -sf -X DELETE \
+            "$SUPABASE_URL/rest/v1/posts?id=eq.$POST_ID" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
+          echo "Deleted dummy post (id=$POST_ID)"
+
+          echo "::notice::Supabase kept alive: INSERT -> DELETE dummy post succeeded"
