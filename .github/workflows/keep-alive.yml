@@ -2,23 +2,30 @@ name: Keep Project Alive
 
 on:
   schedule:
-    - cron: "0 0 */5 * *"
+    - cron: "0 0 */3 * *"
   workflow_dispatch:
 
 jobs:
   keep-db-alive:
     runs-on: ubuntu-latest
     steps:
-      - name: Insert & delete dummy private post
+      - name: Keep Supabase Alive (Ping & Dummy Operations)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           set -euo pipefail
 
+          echo "[1/3] Ping Supabase REST Root Endpoint ..."
+          curl -sf "$SUPABASE_URL/rest/v1/" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            > /dev/null
+          echo "Root REST Endpoint ping successful."
+
           SLUG="keep-alive-$(date +%s)"
 
-          echo "[1/2] Creating a dummy private post ..."
+          echo "[2/3] Creating a dummy private post ..."
           INSERT_RESPONSE=$(curl -sf -X POST \
             "$SUPABASE_URL/rest/v1/posts?select=id" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
@@ -34,11 +41,11 @@ jobs:
           fi
           echo "Created dummy private post (id=$POST_ID, slug=$SLUG)"
 
-          echo "[2/2] Deleting the dummy post ..."
+          echo "[3/3] Deleting the dummy post ..."
           curl -sf -X DELETE \
             "$SUPABASE_URL/rest/v1/posts?id=eq.$POST_ID" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
           echo "Deleted dummy post (id=$POST_ID)"
 
-          echo "::notice::Supabase kept alive: INSERT -> DELETE dummy post succeeded"
+          echo "::notice::Supabase kept alive: Ping + INSERT -> DELETE dummy post succeeded"
