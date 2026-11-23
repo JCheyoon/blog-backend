@@ -56,11 +56,13 @@ that imports `post.Service` was planned this way. It is on hold.
 ## Local development
 
 ```bash
-cp .env.example .env
-go run ./cmd/hashpw "your-admin-password"   # copy output into ADMIN_PASSWORD_HASH in .env
+# create .env with: DATABASE_URL, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD_HASH_B64,
+#                   ANTHROPIC_API_KEY (PORT is optional, default 8080)
+# see internal/platform/config.go for what each one is used for
+go run ./cmd/hashpw "your-admin-password"   # copy output into ADMIN_PASSWORD_HASH_B64 in .env
 # get ANTHROPIC_API_KEY from console.anthropic.com
 
-make docker-up      # starts postgres + api (or point DATABASE_URL at Supabase directly)
+make docker-up      # builds and starts the api container only; DATABASE_URL must point at an existing Postgres (e.g. Supabase)
 make migrate-up      # applies schema (run once, needs golang-migrate CLI)
 make run
 ```
