@@ -26,7 +26,7 @@ since every call costs real money. This is deliberately single-turn and
 scoped to one post — no vector search needed yet, the whole post fits in
 the prompt.
 
-**"Ask my blog" (planned)** — a blog-wide version of the above that can
+**"Ask my blog" (on hold)** — a blog-wide version of the above that can
 answer questions spanning multiple posts. Needs semantic search across all
 posts, which the single-post version doesn't: `pgvector` extension on the
 same Supabase Postgres (no separate vector DB), Voyage AI for embeddings
@@ -49,9 +49,9 @@ migrations/   versioned SQL schema
 ```
 
 Each domain (`post`, `auth`) is self-contained: handler → service → repository.
-`main.go` only assembles them. This matters for what comes next — a planned
-`cmd/mcp-server` binary will import `post.Service` directly and expose it as
-MCP tools, reusing the exact same business logic instead of duplicating it.
+`main.go` only assembles them. Business logic stays in the service layer, so
+another entrypoint could reuse it without duplicating it. A `cmd/mcp-server`
+that imports `post.Service` was planned this way. It is on hold.
 
 ## Local development
 
@@ -92,9 +92,20 @@ POST   /api/posts/{slug}/ask     { "question": "..." } -> { "answer": "..." }, r
 
 ## Roadmap
 
-- [ ] "Ask this post" chatbot, scoped per post
-- [ ] "Ask my blog" — pgvector + Voyage embeddings, blog-wide semantic Q&A
-- [ ] Image upload endpoint (presigned URL to object storage)
-- [ ] `cmd/mcp-server` — expose `post.Service` as MCP tools (search, summarize,
-      draft LinkedIn post) for AI clients like Claude Desktop
-- [ ] Auto-translation pipeline on publish
+As of 2026-11-23, blog posts are written as Markdown in the site repository
+([JCheyoon.github.io](https://github.com/JCheyoon/JCheyoon.github.io)) and are
+published through a reviewed pull request. This API is no longer the content
+source. See that repo's `docs/SPEC.md` and `docs/ROADMAP.md`.
+
+- [x] "Ask this post" — `POST /api/posts/{slug}/ask` is implemented. A widget
+      on the site is an optional item in the site's last phase. It will need
+      to read post content from the site instead of this database.
+- [ ] Translation — moved to the site repo. An English draft is generated
+      for one post at a time and published only after human review. There is
+      no auto-translation on publish.
+- [ ] LinkedIn sharing — moved to the site repo. The post text is reviewed in
+      the publish PR, and a GitHub Action posts it after merge. No MCP server
+      is needed for this.
+- On hold: "Ask my blog" (pgvector + Voyage embeddings) and `cmd/mcp-server`.
+- Not needed: an image upload endpoint. Images are committed with posts in
+  the site repo.
