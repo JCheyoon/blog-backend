@@ -16,7 +16,7 @@
 
 ## 시크릿 취급 규칙
 
-- 시크릿은 **`.env`에만** 두고 코드/설정 파일에 하드코딩하지 않는다. `.env`는 gitignore되어 있다 (`.gitignore`: `.env*`, `bin/`).
+- 시크릿은 **`.env`에만** 두고 코드/설정 파일에 하드코딩하지 않는다. `.env`는 gitignore되어 있다 (`.gitignore`: `.env*`, `bin/`, `/api`).
 - `.env`는 **docker-compose(`env_file: .env`)와 Makefile(`include .env; export`)이 로드**한다. Go 앱은 `os.Getenv`로만 읽는다.
 - `ADMIN_PASSWORD_HASH`는 평문이 아닌 base64로 감싼 bcrypt 해시를 저장한다.
 
