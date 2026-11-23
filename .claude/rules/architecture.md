@@ -51,10 +51,11 @@
 
 ## 향후 재사용 계획 (현재 아키텍처의 존재 이유)
 
-- README Roadmap에 `cmd/mcp-server`가 `post.Service`를 직접 import해 MCP 도구로 노출할 계획이 명시되어 있다. 따라서 **비즈니스 로직은 반드시 service 계층**에 있어야 하며 handler에 넣으면 안 된다.
+- README Roadmap의 `cmd/mcp-server` 계획은 보류 상태다(2026-11-23).
+- 그래도 **비즈니스 로직은 반드시 service 계층**에 두고 handler에 넣지 않는다. 다른 진입점(CLI, 나중의 MCP 서버 등)이 같은 로직을 재사용할 수 있어야 하기 때문이다.
 - 근거: `README.md` Project layout, `cmd/api/main.go` 주석
 
 ## TODO
 
 - **테스트 구조**: 테스트 파일이 없어 레이어별 테스트 전략(테이블 드리븐/통합 테스트 등)이 정의되지 않았다.
-- **커밋 컨벤션**: git 로그에 `test`, `debug`, `fix yml` 같은 임시 커밋이 다수 존재해 명확한 컨벤션을 확인할 수 없다.
+- **커밋 컨벤션**: 과거 git 로그에는 `test`, `debug`, `fix yml` 같은 임시 커밋이 많다. 앞으로의 규칙은 `git-workflow.md`에 정했다(2026-11-23).
