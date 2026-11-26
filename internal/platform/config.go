@@ -1,34 +1,15 @@
 package platform
 
-import (
-	"fmt"
-	"os"
-)
+import "os"
 
 type Config struct {
-	Port            string
-	DatabaseURL     string
-	AnthropicAPIKey string
+	Port string
 }
 
-func LoadConfig() (*Config, error) {
-	cfg := &Config{
-		Port:            getEnv("PORT", "8080"),
-		DatabaseURL:     os.Getenv("DATABASE_URL"),
-		AnthropicAPIKey: os.Getenv("ANTHROPIC_API_KEY"),
+func LoadConfig() *Config {
+	return &Config{
+		Port: getEnv("PORT", "8080"),
 	}
-
-	required := map[string]string{
-		"DATABASE_URL":      cfg.DatabaseURL,
-		"ANTHROPIC_API_KEY": cfg.AnthropicAPIKey,
-	}
-	for key, val := range required {
-		if val == "" {
-			return nil, fmt.Errorf("missing required environment variable: %s", key)
-		}
-	}
-
-	return cfg, nil
 }
 
 func getEnv(key, fallback string) string {
