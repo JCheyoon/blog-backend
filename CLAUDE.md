@@ -7,6 +7,7 @@
 - 이 저장소는 유지보수 모드다.
   - 남은 역할: "이 글에 질문하기"(`POST /api/posts/{slug}/ask`). 사이트에서 쓰려면 글 본문을 DB 대신 사이트에서 가져오게 바꿔야 한다(사이트 로드맵 Phase 5, 선택).
   - 보류: "Ask my blog", `cmd/mcp-server`.
+  - 쓰기 API는 없다. 관리자 화면(은퇴한 SPA)이 쓰던 로그인·글/카테고리 쓰기 API와 인증 코드는 2026-11-25에 지웠다. 공개 읽기(`GET /api/posts`, `GET /api/posts/{slug}`, `GET /api/categories`)와 질문하기만 남았다.
   - 새 기능은 사이트 로드맵(`docs/ROADMAP.md`)에 있을 때만 만든다.
 - push와 PR은 `create-pr` 스킬로 한다(한글 PR, AI 작성 표시 없음). push 전에 반드시 PR 초안을 보여 주고 승인을 받는다. merge와 배포는 사람이 한다(`.claude/rules/git-workflow.md`).
 
@@ -68,10 +69,10 @@
 
 ## 구조와 명령
 
-- `cmd/api/`: 진입점. 설정, DB, 핸들러를 조립하고 서버를 띄운다. `cmd/hashpw/`: 관리자 비밀번호 해시 생성
+- `cmd/api/`: 진입점. 설정, DB, 핸들러를 조립하고 서버를 띄운다
 - `internal/<도메인>/`: `model`, `repository`(SQL), `service`(비즈니스 규칙), `handler`(HTTP) 4개 파일. `main.go`는 조립만 한다(`architecture.md`)
 - `internal/platform/`: 설정과 DB 풀, `internal/docs/`: OpenAPI와 Swagger UI, `migrations/`: SQL 마이그레이션
-- 명령(`Makefile`): `make run`, `make build`, `make docker-up`, `make migrate-up`, `make migrate-down`, `make hash-password PASSWORD=...`
+- 명령(`Makefile`): `make run`, `make build`, `make docker-up`, `make migrate-up`, `make migrate-down`
   - Makefile이 `.env`를 읽으므로 `.env`가 없으면 make가 실패한다. 필요한 변수는 README의 Local development와 `config-and-secrets.md`에 있다.
 
 ## Claude Workspace (.claude/)

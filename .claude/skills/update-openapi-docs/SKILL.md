@@ -21,17 +21,16 @@ description: API 변경 시 internal/docs/openapi.yaml을 코드와 동기화한
 
 ## 수행 절차
 
-1. **현재 스펙 확인**: `internal/docs/openapi.yaml` 열기. tags: `auth`, `posts`, `categories`, `chat`.
+1. **현재 스펙 확인**: `internal/docs/openapi.yaml` 열기. tags: `posts`, `chat`.
 
 2. **paths 동기화**: 코드의 `mux.HandleFunc("<METHOD> <path>", ...)` 목록과 일치하는지 대조.
    - 경로 파라미터는 `{slug}`/`{id}` 형태.
-   - 공개 라우트: `security` 없음.
-   - 관리자 라우트(`/api/admin/...` 또는 auth로 감싼 라우트): `security: [bearerAuth: []]`.
+   - 공개 라우트: `security` 없음(지금은 모든 라우트가 공개).
 
-3. **요청 본문**: 인라인 객체보다 `components/schemas`의 Input 스키마 `$ref` 사용 (PostInput 패턴).
+3. **요청 본문**: 인라인 객체보다 `components/schemas`의 Input 스키마 `$ref` 사용 (2026-11-25에 지운 PostInput 패턴).
    - `required: [title]`처럼 필수 필드 명시.
 
-4. **응답 문서화**: 코드에서 실제로 쓰는 상태 코드만 기술 (200/201/204/400/401/404/429/502/503).
+4. **응답 문서화**: 코드에서 실제로 쓰는 상태 코드만 기술 (지금은 200/400/404/429/500/502/503).
    - 에러 응답은 `$ref: "#/components/schemas/Error"`.
    - 204는 content 없음.
 

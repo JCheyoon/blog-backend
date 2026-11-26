@@ -1,14 +1,13 @@
 openapi: 3.0.3
 info:
   title: Blog API
-  description: Personal tech blog backend - admin CRUD + per-post AI Q&A.
+  description: Personal tech blog backend - read-only published posts + per-post AI Q&A.
   version: "1.0.0"
 servers:
   - url: /
     description: Current origin (works for both local and deployed)
 
 tags:
-  - name: auth
   - name: posts
   - name: chat
 
@@ -28,46 +27,11 @@ paths:
                     type: string
                     example: ok
 
-  /api/auth/login:
-    post:
-      tags: [auth]
-      summary: Log in as admin and receive a JWT
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [email, password]
-              properties:
-                email:
-                  type: string
-                  example: you@example.com
-                password:
-                  type: string
-                  format: password
-      responses:
-        "200":
-          description: Login successful
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  token:
-                    type: string
-        "401":
-          description: Invalid credentials
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
   /api/posts:
     get:
       tags: [posts]
       summary: List published posts
-      description: Public route - returns published posts only. Drafts are private and only visible via the authenticated /api/admin/posts route.
+      description: Public route - returns published posts only.
       parameters:
         - name: tag
           in: query
@@ -90,32 +54,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Post"
-    post:
-      tags: [posts]
-      summary: Create a post (admin only)
-      description: Set published=false to save as a private draft. Drafts are only visible to the admin.
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PostInput"
-      responses:
-        "201":
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Post"
-        "401":
-          description: Missing or invalid token
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
   /api/posts/{slug}:
     get:
       tags: [posts]
@@ -140,113 +78,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-
-  /api/admin/posts:
-    get:
-      tags: [posts]
-      summary: List all posts including drafts (admin only)
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: tag
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Filter by tag
-        - name: category
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Filter by category slug
-      responses:
-        "200":
-          description: List of posts including drafts
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Post"
-        "401":
-          description: Missing or invalid token
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /api/admin/posts/{id}:
-    get:
-      tags: [posts]
-      summary: Get a post by id including drafts (admin only)
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: The post
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Post"
-        "404":
-          description: Not found
-        "401":
-          description: Missing or invalid token
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /api/posts/{id}:
-    put:
-      tags: [posts]
-      summary: Update a post by id (admin only)
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PostInput"
-      responses:
-        "200":
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Post"
-        "404":
-          description: Not found
-    delete:
-      tags: [posts]
-      summary: Delete a post by id (admin only)
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "204":
-          description: Deleted, no content
-        "404":
-          description: Not found
 
   /api/posts/{slug}/ask:
     post:
@@ -290,11 +121,6 @@ paths:
                 $ref: "#/components/schemas/Error"
 
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
   schemas:
     Error:
       type: object
@@ -327,19 +153,3 @@ components:
         updatedAt:
           type: string
           format: date-time
-    PostInput:
-      type: object
-      required: [title]
-      properties:
-        title:
-          type: string
-        excerpt:
-          type: string
-        content:
-          type: string
-        tags:
-          type: array
-          items:
-            type: string
-        published:
-          type: boolean

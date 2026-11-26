@@ -39,7 +39,7 @@ PostgreSQL + pgx (raw SQL, ORM 없음) 관례를 정리한다.
 - Supabase REST API(anon key) 노출 표면을 RLS로 통제한다.
 - **정책**: 공개 읽기용 `CREATE POLICY "Enable read access for all users" ... FOR SELECT USING (true)`.
 - **비공개 데이터**: 000005에서 `posts`의 공개 SELECT 정책을 내리고 `USING (published = true)`로 교체 → 초안은 default-deny.
-- **Go 백엔드는 postgres 소유자 역할로 접속해 RLS를 우회**하므로 관리자 CRUD에는 영향 없음 — 이를 마이그레이션 주석에 명시하는 관례.
+- **Go 백엔드는 postgres 소유자 역할로 접속해 RLS를 우회**하므로 백엔드 조회에는 영향 없음 — 이를 마이그레이션 주석에 명시하는 관례.
 - 마이그레이션 주석은 Supabase 경고/배경을 설명한다.
 - 근거: `migrations/000004_enable_rls.up.sql`, `migrations/000005_private_posts_rls.up.sql`
 

@@ -35,15 +35,14 @@ description: 새 도메인 패키지(internal/<domain>/ 4파일: model, reposito
 4. **`internal/<domain>/service.go`**
    - `Service{repo *Repository}` + `NewService(repo *Repository)`.
    - 검증(빈 값 → `fmt.Errorf`), slug가 필요하면 패키지 내 `slugify` 복제 (post/category 모두 자체 보유).
-   - public/admin 동작 차이가 있으면 메서드를 분리하고 주석으로 명시.
 
 5. **`internal/<domain>/handler.go`**
    - `Handler{svc *Service}` + `NewHandler(svc *Service)`.
-   - `Register(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc)` — auth 무지 원칙 유지.
+   - `Register(mux *http.ServeMux)`. 미들웨어가 필요하면 파라미터로 주입받는다(`post`의 `askRateLimit` 패턴).
    - `writeJSON`/`writeError` 헬퍼 복제. 에러 매핑: 404(`ErrNotFound`) / 400(검증) / 500(`slog.Error`).
 
 6. **`cmd/api/main.go` 배선**
-   - `repo := <domain>.NewRepository(db)` → `svc := <domain>.NewService(repo)` → `h := <domain>.NewHandler(svc)` → `h.Register(mux, requireAuth)` (공개 라우트만 있으면 미들웨어 생략 가능).
+   - `repo := <domain>.NewRepository(db)` → `svc := <domain>.NewService(repo)` → `h := <domain>.NewHandler(svc)` → `h.Register(mux)`.
 
 7. **문서화**: `internal/docs/openapi.yaml`에 paths + schemas 추가 (`update-openapi-docs` 스킬 참고).
 

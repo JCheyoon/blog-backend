@@ -34,7 +34,6 @@ blog-backend의 기존 3계층 패턴(handler → service → repository)을 그
 3. **service.go** — 메서드 추가
    - 검증 먼저: `strings.TrimSpace(...) == ""` → `fmt.Errorf("... is required")`.
    - nil 슬라이스 정규화 (`if in.Tags == nil { in.Tags = []string{} }`), 필요 시 `slugify`.
-   - admin 전용(초안 포함) 메서드는 주석으로 admin-only임을 명시 (`GetBySlugAdmin` 패턴).
 
 4. **handler.go** — 메서드 + 라우트 등록
    - 메서드명: 소문자 단일 동사 (`create`, `list`, `ask` 등).
@@ -42,7 +41,7 @@ blog-backend의 기존 3계층 패턴(handler → service → repository)을 그
    - 에러 매핑: `errors.Is(err, ErrNotFound)` → 404, 검증 에러 → 400(`err.Error()`), 그 외 → 500 + `slog.Error("<작업명>", "error", err)`.
    - `Register`에 라우트 추가:
      - 공개: `mux.HandleFunc("GET /api/posts/{slug}", h.xxx)`
-     - 관리자: `mux.HandleFunc("...", authMiddleware(h.xxx))`, 경로는 `/api/admin/...` 관례
+     - 인증이 필요한 라우트: 지금은 인증이 없다(2026-11-25 제거). 필요하면 먼저 묻는다
      - 비용 발생 라우트(외부 API 호출): rate limit 미들웨어 파라미터 사용 (post 패키지의 `askRateLimit` 패턴)
 
 5. **openapi.yaml 동기화** — `update-openapi-docs` 스킬 참고.

@@ -10,7 +10,7 @@
 
 | 계층            | 책임                                           | 금지               |
 | --------------- | ---------------------------------------------- | ------------------ |
-| `model.go`      | 엔티티 + 입력 구조체, JSON 태그                | 로직 없음          |
+| `model.go`      | 엔티티(+ 쓰기가 있으면 입력 구조체), JSON 태그 | 로직 없음          |
 | `repository.go` | 순수 SQL 데이터 접근                           | 비즈니스 규칙 없음 |
 | `service.go`    | 검증, slug 생성, 공개/비공개 정책 결정         | HTTP 지식 없음     |
 | `handler.go`    | JSON 직렬화, 상태 코드, 에러 매핑, 라우트 등록 | SQL 없음           |
@@ -24,22 +24,22 @@
 
 ### 패키지 간 무지(ignorance) 원칙
 
-- 도메인 패키지는 **auth 구현을 알지 못한다**. 인증 미들웨어는 `Register`의 파라미터로 주입받는다.
-  - `post.Handler.Register(mux, authMiddleware, askRateLimit)` — /ask 라우트만 rate limit 적용
-  - `category.Handler.Register(mux, authMiddleware)`
-  - `auth.Handler.Register(mux)` — 인증 불필요
-- 근거: `internal/post/handler.go` Register 주석 "this package stays unaware of how auth works"
+- 도메인 패키지는 미들웨어 구현을 알지 못한다. 필요한 미들웨어는 `Register`의 파라미터로 주입받는다.
+  - `post.Handler.Register(mux, askRateLimit)` — /ask 라우트만 rate limit 적용
+  - `category.Handler.Register(mux)`
+- 인증은 없다. 관리자 로그인(`internal/auth`)과 쓰기 라우트는 2026-11-25에 지웠다. 댓글 등으로 인증이 다시 필요하면 같은 방식(미들웨어를 `Register` 파라미터로 주입)으로 넣는다.
+- 근거: `internal/post/handler.go`, `cmd/api/main.go`
 
 ### 미들웨어는 함수형 데코레이터
 
 - `func(http.HandlerFunc) http.HandlerFunc` 형태의 순수 함수 체인: `withCORS(withLogging(mux))`.
-- 근거: `cmd/api/main.go`, `internal/auth/middleware.go`
+- 근거: `cmd/api/main.go`, `internal/chat/ratelimit.go`
 
 ## 공개/비공개 (draft) 분리 규칙
 
 - 공개 라우트(`/api/...`)는 `published = true`인 게시물만 반환한다. 초안(draft)은 절대 공개 경로로 새지 않는다.
-- 관리자 라우트(`/api/admin/...`)는 auth 미들웨어 뒤에 있으며 초안을 포함한다.
-- **정책은 repository의 `publishedOnly` 파라미터로 구현**하고, service가 기본값을 결정한다 (예: `GetBySlug`은 항상 published-only, `GetBySlugAdmin`은 전체).
+- 초안을 보여 주는 라우트는 없다(관리자 라우트는 2026-11-25에 지웠다).
+- **정책은 repository의 `publishedOnly` 파라미터로 구현**하고, service가 기본값을 결정한다 (예: `GetBySlug`은 항상 published-only).
 - 근거: `internal/post/repository.go` (`AND (NOT $2 OR published = true)`), `internal/post/service.go`, `internal/post/handler.go` 라우트 목록
 
 ## 라이프사이클 (cmd/api/main.go)

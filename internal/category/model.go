@@ -11,13 +11,3 @@ type Category struct {
 	CreatedAt time.Time  `json:"createdAt"`
 	UpdatedAt time.Time  `json:"updatedAt"`
 }
-
-type CreateCategoryInput struct {
-	Name     string `json:"name"`
-	ParentID *int64 `json:"parentId,omitempty"`
-}
-
-type UpdateCategoryInput struct {
-	Name     *string `json:"name,omitempty"`
-	ParentID *int64  `json:"parentId,omitempty"`
-}

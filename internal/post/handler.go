@@ -6,7 +6,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -23,21 +22,13 @@ func NewHandler(svc *Service, chat asker) *Handler {
 	return &Handler{svc: svc, chat: chat}
 }
 
-// Register wires this handler's routes onto mux. Auth-protected routes are
-// wrapped by the caller (see cmd/api/main.go) so this package stays
-// unaware of how auth works. askRateLimit wraps only the /ask route, since that's the one route that costs real money per call.
-func (h *Handler) Register(mux *http.ServeMux, authMiddleware func(http.HandlerFunc) http.HandlerFunc, askRateLimit func(http.HandlerFunc) http.HandlerFunc) {
-	// Public routes: published posts only. Drafts are private.
+// Register wires this handler's routes onto mux. All routes are public and
+// return published posts only. askRateLimit wraps only the /ask route, since
+// that's the one route that costs real money per call.
+func (h *Handler) Register(mux *http.ServeMux, askRateLimit func(http.HandlerFunc) http.HandlerFunc) {
 	mux.HandleFunc("GET /api/posts", h.list)
 	mux.HandleFunc("GET /api/posts/{slug}", h.getBySlug)
 	mux.HandleFunc("POST /api/posts/{slug}/ask", askRateLimit(h.ask))
-
-	// Admin routes: auth required, drafts included.
-	mux.HandleFunc("POST /api/posts", authMiddleware(h.create))
-	mux.HandleFunc("PUT /api/posts/{id}", authMiddleware(h.update))
-	mux.HandleFunc("DELETE /api/posts/{id}", authMiddleware(h.delete))
-	mux.HandleFunc("GET /api/admin/posts", authMiddleware(h.listAll))
-	mux.HandleFunc("GET /api/admin/posts/{id}", authMiddleware(h.getByID))
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
@@ -47,20 +38,6 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list posts")
 		slog.Error("list posts", "error", err)
-		return
-	}
-	writeJSON(w, http.StatusOK, posts)
-}
-
-// listAll returns every post including drafts. Registered behind the auth
-// middleware, so private posts are only visible to the admin.
-func (h *Handler) listAll(w http.ResponseWriter, r *http.Request) {
-	tag := r.URL.Query().Get("tag")
-	category := r.URL.Query().Get("category")
-	posts, err := h.svc.ListAll(r.Context(), tag, category)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list posts")
-		slog.Error("list all posts", "error", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, posts)
@@ -79,84 +56,6 @@ func (h *Handler) getBySlug(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, p)
-}
-
-func (h *Handler) getByID(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid post id")
-		return
-	}
-
-	p, err := h.svc.GetByID(r.Context(), id)
-	if errors.Is(err, ErrNotFound) {
-		writeError(w, http.StatusNotFound, "post not found")
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to get post")
-		slog.Error("get post by id", "error", err)
-		return
-	}
-	writeJSON(w, http.StatusOK, p)
-}
-
-func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	var in CreatePostInput
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-
-	p, err := h.svc.Create(r.Context(), in)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	writeJSON(w, http.StatusCreated, p)
-}
-
-func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid post id")
-		return
-	}
-
-	var in UpdatePostInput
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-
-	p, err := h.svc.Update(r.Context(), id, in)
-	if errors.Is(err, ErrNotFound) {
-		writeError(w, http.StatusNotFound, "post not found")
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	writeJSON(w, http.StatusOK, p)
-}
-
-func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid post id")
-		return
-	}
-
-	if err := h.svc.Delete(r.Context(), id); errors.Is(err, ErrNotFound) {
-		writeError(w, http.StatusNotFound, "post not found")
-		return
-	} else if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to delete post")
-		slog.Error("delete post", "error", err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
 }
 
 type askRequest struct {

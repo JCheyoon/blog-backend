@@ -1,8 +1,9 @@
 # blog-backend
 
 Go REST API for [blog-frontend](#) — a personal tech blog / portfolio site.
-Admin-only, CRUD built deliberately minimal: no framework, no ORM, no multi-user auth system, because none of those are
-needed for a single-author blog.
+Read-only, built deliberately minimal: no framework, no ORM, no auth. Posts are
+written in the site repository, so this API only serves published posts and the
+"Ask this post" endpoint.
 
 ## Stack
 
@@ -10,7 +11,6 @@ needed for a single-author blog.
 | ---------- | ---------------------------------- | ---------------------------------------------------------------------------------- |
 | Routing    | stdlib `net/http` (Go 1.22+)       | Method + path-pattern routing shipped in stdlib — no need for gin/echo/chi         |
 | Database   | PostgreSQL + `pgx`                 | Raw SQL, no ORM — explicit queries, no hidden N+1s                                 |
-| Auth       | JWT + bcrypt, single admin         | One author, one login. A `users` table would be over-engineering here              |
 | Migrations | plain SQL files + `golang-migrate` | Versioned schema without a heavyweight migration framework                         |
 | Deployment | Docker, single binary              | `CGO_ENABLED=0` static build → tiny Alpine image                                   |
 | Hosting    | Render (free)                      | Only platform with a real, no-expiry-adjacent free web service tier as of 2026     |
@@ -40,15 +40,15 @@ context and post citations in the answer.
 ```
 cmd/
   api/        entrypoint: wires config, db, handlers, starts the server
-  hashpw/     CLI to generate a bcrypt hash for your admin password
 internal/
   post/       model, repository (SQL), service (business rules), handler (HTTP)
-  auth/       JWT issuing/parsing, login handler, auth middleware
+  category/   same layout, category tree
+  chat/       Anthropic client, per-IP rate limiter for /ask
   platform/   config loading, db connection pool
 migrations/   versioned SQL schema
 ```
 
-Each domain (`post`, `auth`) is self-contained: handler → service → repository.
+Each domain (`post`, `category`) is self-contained: handler → service → repository.
 `main.go` only assembles them. Business logic stays in the service layer, so
 another entrypoint could reuse it without duplicating it. A `cmd/mcp-server`
 that imports `post.Service` was planned this way. It is on hold.
@@ -56,10 +56,8 @@ that imports `post.Service` was planned this way. It is on hold.
 ## Local development
 
 ```bash
-# create .env with: DATABASE_URL, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD_HASH_B64,
-#                   ANTHROPIC_API_KEY (PORT is optional, default 8080)
+# create .env with: DATABASE_URL, ANTHROPIC_API_KEY (PORT is optional, default 8080)
 # see internal/platform/config.go for what each one is used for
-go run ./cmd/hashpw "your-admin-password"   # copy output into ADMIN_PASSWORD_HASH_B64 in .env
 # get ANTHROPIC_API_KEY from console.anthropic.com
 
 make docker-up      # builds and starts the api container only; DATABASE_URL must point at an existing Postgres (e.g. Supabase)
@@ -73,12 +71,9 @@ API is now live at `http://localhost:8080`.
 
 ```
 GET    /healthz
-POST   /api/auth/login
-GET    /api/posts               ?tag=
+GET    /api/posts               ?tag= ?category=
 GET    /api/posts/{slug}
-POST   /api/posts                (auth required)
-PUT    /api/posts/{id}           (auth required)
-DELETE /api/posts/{id}           (auth required)
+GET    /api/categories
 POST   /api/posts/{slug}/ask     { "question": "..." } -> { "answer": "..." }, rate-limited
 ```
 
@@ -87,8 +82,9 @@ POST   /api/posts/{slug}/ask     { "question": "..." } -> { "answer": "..." }, r
 - **No ORM / query builder.** SQL is explicit in `repository.go` — easier to
   reason about and to optimize later (indexes are already added for the
   published+created_at listing query and the tags GIN index).
-- **No multi-user auth.** Admin credentials live in env vars, checked with
-  bcrypt. Adding a `users` table for one person would be premature.
+- **No auth.** There is nothing to write through this API: posts are
+  written in the site repository. The admin login and write routes were
+  removed on 2026-11-25 along with the retired admin UI.
 - **No framework.** Go 1.22's `http.ServeMux` handles method + path params
   natively now, which covers everything this API needs.
 

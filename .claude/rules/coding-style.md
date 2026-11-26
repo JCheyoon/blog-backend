@@ -5,7 +5,7 @@
 ## 스택 원칙
 
 - **표준 라이브러리 우선**: `net/http`, `encoding/json`, `log/slog`를 사용한다. 프레임워크(gin/echo/chi), ORM, 외부 SDK는 도입하지 않는다.
-  - 근거: `README.md` "Deliberate non-decisions", `go.mod` (의존성은 jwt/pgx/x-crypto 3개뿐)
+  - 근거: `README.md` "Deliberate non-decisions", `go.mod` (직접 의존성은 pgx 하나뿐. jwt·bcrypt는 2026-11-25 인증 코드와 함께 제거)
 - **외부 HTTP 통합도 직접 구현**: Anthropic API 클라이언트를 SDK 없이 `net/http`로 직접 작성한다.
   - 근거: `internal/chat/client.go` 주석 "No SDK dependency"
 - **정적 빌드**: `CGO_ENABLED=0`로 빌드해 Alpine 이미지에 올린다.
@@ -18,7 +18,7 @@
 - **에러 래핑**: DB/외부 호출 에러는 항상 `fmt.Errorf("소문자 작업명: %w", err)`로 래핑한다. 작업명은 로그 메시지와 동일한 표현을 쓴다.
   - 근거: `internal/post/repository.go` (`"list posts: %w"`, `"scan post: %w"`), `internal/chat/client.go` (`"call anthropic api: %w"`)
 - **도메인 에러**: "not found" 계열은 패키지 레벨 `var ErrNotFound = errors.New(...)`로 선언하고 `errors.Is`로 비교한다.
-  - 근거: `internal/post/repository.go`, `internal/category/repository.go`
+  - 근거: `internal/post/repository.go`
 - **HTTP 응답 헬퍼**: 패키지마다 `writeJSON(w, status, v)` / `writeError(w, status, msg)`를 자체 정의해 사용한다 (공용 패키지로 추출하지 않음).
   - 근거: `internal/post/handler.go`, `internal/category/handler.go` — 두 곳에 동일한 구현 중복
 - **로깅**: `slog` 사용. 메시지는 소문자 동사+명사 형태, `"error"` 키에 에러를 담는다. 예: `slog.Error("list posts", "error", err)`.
@@ -26,16 +26,16 @@
 - **JSON 디코딩**: `json.NewDecoder(r.Body).Decode(&in)` → 실패 시 400. 인코딩은 `json.NewEncoder(w).Encode(v)`.
   - 근거: `internal/post/handler.go`
 - **요청 본문 검증**: `strings.TrimSpace(...) == ""` 검사 후 `fmt.Errorf("title is required")` 형태의 평문 에러를 반환하고, 핸들러가 400으로 매핑한다.
-  - 근거: `internal/post/service.go` Create/Update
+  - 근거: `internal/post/handler.go` ask(`question is required`). 서비스 계층 검증은 2026-11-25에 지운 관리자 쓰기 API에서 쓰던 관례로, 새 쓰기 API를 만들면 따른다.
 - **nil 슬라이스 정규화**: 입력이 nil이면 빈 슬라이스로 만들어 JSON에서 `null` 대신 `[]`가 나가게 한다.
-  - 근거: `internal/post/service.go` Create (`if in.Tags == nil { in.Tags = []string{} }`)
+  - 근거: `internal/category/handler.go` tree(`cats = []Category{}`)
 - **포인터 필드로 부분 수정**: 수정 요청에서 "값을 안 보냄"과 "명시적으로 비움"을 구분할 때 `*string`/`*int64`를 쓴다.
-  - 근거: `internal/category/model.go` `UpdateCategoryInput{Name *string}`
+  - 근거: 2026-11-25에 지운 관리자 쓰기 API에서 쓰던 관례. 새 쓰기 API를 만들면 따른다.
 
 ## 주석 스타일
 
 - **Go 코드 주석은 영어**, "무엇"보다 "왜(why)"를 설명한다. 미들웨어/서비스 주석에 의도(보안, 비용, 재사용)를 적는 관례가 있다.
-  - 근거: `internal/post/handler.go` ask 주석, `internal/post/service.go` 상단 주석, `internal/auth/middleware.go`
+  - 근거: `internal/post/handler.go` ask 주석, `internal/post/service.go` 상단 주석, `internal/chat/ratelimit.go`
 - **마이그레이션 SQL 주석은 한국어**를 사용하고, Supabase/RLS 배경을 설명한다.
   - 근거: `migrations/000004_enable_rls.up.sql`, `migrations/000005_private_posts_rls.up.sql`
 

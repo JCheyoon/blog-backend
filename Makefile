@@ -1,7 +1,7 @@
 include .env
 export
 
-.PHONY: run build docker-up docker-down migrate-up migrate-down hash-password
+.PHONY: run build docker-up docker-down migrate-up migrate-down
 
 run:
 	go run ./cmd/api
@@ -21,6 +21,3 @@ migrate-up:
 
 migrate-down:
 	migrate -path migrations -database "$$DATABASE_URL" down 1
-
-hash-password:
-	go run ./cmd/hashpw $(PASSWORD)

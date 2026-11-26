@@ -14,21 +14,3 @@ type Post struct {
 	CreatedAt  time.Time `json:"createdAt"`
 	UpdatedAt  time.Time `json:"updatedAt"`
 }
-
-type CreatePostInput struct {
-	Title      string   `json:"title"`
-	Excerpt    string   `json:"excerpt"`
-	Content    string   `json:"content"`
-	Tags       []string `json:"tags"`
-	CategoryID *int64   `json:"categoryId,omitempty"`
-	Published  bool     `json:"published"`
-}
-
-type UpdatePostInput struct {
-	Title      string   `json:"title"`
-	Excerpt    string   `json:"excerpt"`
-	Content    string   `json:"content"`
-	Tags       []string `json:"tags"`
-	CategoryID *int64   `json:"categoryId,omitempty"`
-	Published  bool     `json:"published"`
-}
