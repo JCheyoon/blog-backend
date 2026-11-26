@@ -1,7 +1,8 @@
-include .env
+# .env는 선택이다(필수 환경 변수 없음). 있으면 읽는다
+-include .env
 export
 
-.PHONY: run build docker-up docker-down migrate-up migrate-down hash-password
+.PHONY: run build docker-up docker-down
 
 run:
 	go run ./cmd/api
@@ -14,13 +15,3 @@ docker-up:
 
 docker-down:
 	docker compose down
-
-# requires golang-migrate CLI: https://github.com/golang-migrate/migrate
-migrate-up:
-	migrate -path migrations -database "$$DATABASE_URL" up
-
-migrate-down:
-	migrate -path migrations -database "$$DATABASE_URL" down 1
-
-hash-password:
-	go run ./cmd/hashpw $(PASSWORD)

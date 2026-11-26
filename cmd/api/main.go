@@ -9,63 +9,27 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/JCheyoon/blog-backend/internal/auth"
-	"github.com/JCheyoon/blog-backend/internal/category"
-	"github.com/JCheyoon/blog-backend/internal/chat"
-	"github.com/JCheyoon/blog-backend/internal/docs"
 	"github.com/JCheyoon/blog-backend/internal/platform"
-	"github.com/JCheyoon/blog-backend/internal/post"
 )
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	cfg, err := platform.LoadConfig()
-	if err != nil {
-		slog.Error("load config", "error", err)
-		os.Exit(1)
-	}
+	cfg := platform.LoadConfig()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	db, err := platform.NewPostgresPool(ctx, cfg.DatabaseURL)
-	if err != nil {
-		slog.Error("connect database", "error", err)
-		os.Exit(1)
-	}
-	defer db.Close()
-
-	// Wiring: handler -> service -> repository. Each domain owns its own
-	// three files; main.go only assembles them. The mcp-server binary
-	// (added later) will import post.Service directly and reuse this
-	// exact business logic instead of duplicating it.
-	chatClient := chat.NewClient(cfg.AnthropicAPIKey)
-	// 20 questions per IP per hour on the /ask route - generous for a real
-	// reader, cheap insurance against someone scripting your API key away.
-	askLimiter := chat.NewRateLimiter(20, time.Hour)
-
-	postRepo := post.NewRepository(db)
-	postSvc := post.NewService(postRepo)
-	postHandler := post.NewHandler(postSvc, chatClient)
-
-	catRepo := category.NewRepository(db)
-	catSvc := category.NewService(catRepo)
-	catHandler := category.NewHandler(catSvc)
-
-	authHandler := auth.NewHandler(cfg.AdminEmail, cfg.AdminPasswordHash, cfg.JWTSecret)
-	requireAuth := auth.Middleware(cfg.JWTSecret)
-
+	// Wiring: each package registers its own routes; main.go only assembles
+	// them. The public read-only MCP endpoint (/mcp) will be added here,
+	// wrapped by internal/ratelimit.
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
 	})
-	authHandler.Register(mux)
-	postHandler.Register(mux, requireAuth, askLimiter.Middleware)
-	catHandler.Register(mux, requireAuth)
-	docs.Register(mux)
 
 	handler := withCORS(withLogging(mux))
 
@@ -105,8 +69,8 @@ func withLogging(next http.Handler) http.Handler {
 func withCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*") // tighten to your frontend origin in production
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
